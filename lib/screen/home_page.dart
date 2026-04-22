@@ -91,23 +91,18 @@ class _HomePageState extends State<HomePage> {
     setState(() { _isProcessing = true; });
 
     try {
-      // Converte a lista de objetos para uma String JSON para salvar no SQLite
-      final String itensJson = jsonEncode(_itens.map((item) => item.toMap()).toList());
+      // 1. Cria o objeto completo
+      final novoOrcamento = Orcamento(
+        cliente: nomeCliente,
+        valorTotal: totalGeral,
+        data: DateTime.now().toIso8601String(),
+        itens: _itens, // Passa a lista direto
+      );
 
-      // Prepara o mapa para inserir no banco de dados
-      // Nota: Estamos usando um Map direto aqui para facilitar a inserção com a nova coluna JSON
-      final mapOrcamento = {
-        'cliente': nomeCliente,
-        'valor_total': totalGeral,
-        'data': DateTime.now().toIso8601String(),
-        'itens': itensJson,
-      };
+      // 2. Salva no banco usando o helper corretamente
+      await DatabaseHelper.instance.insert(novoOrcamento);
 
-      // Salva no banco (Certifique-se de que sua tabela orcamentos tem a coluna 'itens' e 'valor_total')
-      final db = await DatabaseHelper.instance.database;
-      await db.insert('orcamentos', mapOrcamento);
-
-      // Gera o PDF (Precisamos passar o cliente, total e a lista de itens)
+      // 3. Gera o PDF
       final arquivoPdf = await _pdfService.gerarOrcamentoPdf(nomeCliente, totalGeral, _itens);
 
       ScaffoldMessenger.of(context).showSnackBar(
