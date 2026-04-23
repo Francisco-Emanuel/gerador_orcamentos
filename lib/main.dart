@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screen/home_page.dart';
+import 'screen/main_navigation.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,8 +15,12 @@ class GeradorOrcamentosApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
+        // Configuração visual para a BottomBar
+        navigationBarTheme: NavigationBarThemeData(
+          indicatorColor: Colors.blue.withOpacity(0.2),
+        ),
       ),
-      home: HomePage(),
+      home: MainNavigation(), // Inicia no Wrapper de navegação
     );
   }
 }

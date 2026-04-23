@@ -1,66 +1,48 @@
-import 'dart:typed_data';
+import 'dart:typed_bytes';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../model/item_orcamento.dart';
 
 class PdfService {
-  // Alterado para retornar Uint8List (bytes do PDF)
-  Future<Uint8List> gerarOrcamentoPdf(String cliente, double valorTotal, List<ItemOrcamento> itens) async {
+  Future<Uint8List> gerarOrcamentoPdf(String cliente, double valorTotal, List<ItemOrcamento> itens, Map<String, dynamic> config) async {
     final pdf = pw.Document();
 
-    pdf.addPage(
-      pw.Page(
+    pdf.addPage(pw.Page(
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Center(
-                child: pw.SizedBox(
-                  width: 80,
-                  height: 80,
-                  child: pw.FlutterLogo(),
-                ),
-              ),
-              pw.SizedBox(height: 20),
-              pw.Center(
-                child: pw.Text('ORÇAMENTO COMERCIAL', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-              ),
-              pw.SizedBox(height: 30),
-              pw.Text('Nome: $cliente', style: pw.TextStyle(fontSize: 14)),
-              pw.Text('Data: ${DateTime.now().toString().split(' ')[0]}', style: pw.TextStyle(fontSize: 14)),
-              pw.SizedBox(height: 20),
-              pw.Divider(),
-              pw.SizedBox(height: 10),
+          return pw.Stack(
+              children: [
+                // Marca d'água de autoria - Discreta
+                pw.Positioned(bottom: 0, right: 0, child: pw.Text('Desenvolvido por Francisco Soares', style: pw.TextStyle(fontSize: 8, color: PdfColors.grey400))),
 
-              // Tabela de Itens
-              pw.Table.fromTextArray(
-                headers: ['Descrição', 'Qtd', 'Unitário', 'Total'],
-                data: itens.map((item) => [
-                  item.descricao,
-                  item.quantidade.toString(),
-                  'R\$ ${item.valorUnitario.toStringAsFixed(2)}',
-                  'R\$ ${item.valorTotal.toStringAsFixed(2)}',
-                ]).toList(),
-                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
-                cellAlignment: pw.Alignment.centerLeft,
-              ),
+                // Marca d'água da logo - Transparente
+                pw.Positioned.fill(child: pw.Center(child: pw.Opacity(opacity: 0.05, child: pw.FlutterLogo(size: 300)))),
 
-              pw.SizedBox(height: 30),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.end,
-                children: [
-                  pw.Text('TOTAL: R\$ ${valorTotal.toStringAsFixed(2)}',
-                      style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
-                ],
-              ),
-            ],
+                pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Orçamento para: $cliente', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                      pw.Divider(),
+                      pw.SizedBox(height: 20),
+                      pw.Table.fromTextArray(
+                        headers: ['ITEM', 'SERVIÇO', 'QTD', 'UNIT', 'TOTAL'],
+                        data: itens.map((i) => [itens.indexOf(i)+1, i.descricao, i.quantidade, i.valorUnitario, i.valorTotal]).toList(),
+                      ),
+                      pw.SizedBox(height: 20),
+                      pw.Align(alignment: pw.Alignment.centerRight, child: pw.Text('VALOR TOTAL: R\$ ${valorTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                      pw.Spacer(),
+                      // Dados vindos das Configurações
+                      pw.Divider(),
+                      pw.Text(config['nome_empresa'], style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text('CNPJ: ${config['cnpj']}'),
+                      pw.Text('Resp: ${config['responsavel']}'),
+                      pw.Text('E-mail: ${config['email']} | Tel: ${config['telefone']}'),
+                    ]
+                )
+              ]
           );
-        },
-      ),
-    );
-
-    return pdf.save(); // Retorna os bytes brutos
+        }
+    ));
+    return pdf.save();
   }
 }
