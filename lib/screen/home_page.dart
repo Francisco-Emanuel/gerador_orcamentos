@@ -4,6 +4,7 @@ import '../model/orcamento.dart';
 import '../model/item_orcamento.dart';
 import '../database/database_helper.dart';
 import '../service/pdf_service.dart';
+import 'visualizacao_page.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -91,29 +92,40 @@ class _HomePageState extends State<HomePage> {
     setState(() { _isProcessing = true; });
 
     try {
-      // 1. Cria o objeto completo
-      final novoOrcamento = Orcamento(
-        cliente: nomeCliente,
-        valorTotal: totalGeral,
-        data: DateTime.now().toIso8601String(),
-        itens: _itens, // Passa a lista direto
-      );
+      final String itensJson = jsonEncode(_itens.map((item) => item.toMap()).toList());
 
-      // 2. Salva no banco usando o helper corretamente
-      await DatabaseHelper.instance.insert(novoOrcamento);
+      final mapOrcamento = {
+        'cliente': nomeCliente,
+        'valor_total': totalGeral,
+        'data': DateTime.now().toIso8601String(),
+        'itens': itensJson,
+      };
 
-      // 3. Gera o PDF
-      final arquivoPdf = await _pdfService.gerarOrcamentoPdf(nomeCliente, totalGeral, _itens);
+      // Salva no banco
+      final db = await DatabaseHelper.instance.database;
+      await db.insert('orcamentos', mapOrcamento);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sucesso! PDF salvo em: ${arquivoPdf.path}'), backgroundColor: Colors.green),
-      );
+      // Gera os bytes do PDF (Não tem mais .path)
+      final pdfBytes = await _pdfService.gerarOrcamentoPdf(nomeCliente, totalGeral, _itens);
 
-      // Limpa a tela após o sucesso
+      // Limpa a tela principal antes de navegar
       setState(() {
         _clienteController.clear();
         _itens.clear();
       });
+
+      // Abre a tela de visualização enviando os bytes do PDF
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VisualizacaoPage(
+              pdfBytes: pdfBytes,
+              nomeArquivo: 'orcamento_${nomeCliente.replaceAll(' ', '_')}.pdf',
+            ),
+          ),
+        );
+      }
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
