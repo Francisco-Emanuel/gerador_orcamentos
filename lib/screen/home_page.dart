@@ -76,16 +76,12 @@ class _HomePageState extends State<HomePage> {
     final nomeCliente = _clienteController.text.trim();
 
     if (nomeCliente.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Informe o nome do cliente.'), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Informe o nome do cliente.'), backgroundColor: Colors.red));
       return;
     }
 
     if (_itens.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Adicione pelo menos um item ao orçamento.'), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Adicione pelo menos um item ao orçamento.'), backgroundColor: Colors.red));
       return;
     }
 
@@ -101,12 +97,15 @@ class _HomePageState extends State<HomePage> {
         'itens': itensJson,
       };
 
-      // Salva no banco
+      // 1. Salva o orçamento no banco de dados
       final db = await DatabaseHelper.instance.database;
       await db.insert('orcamentos', mapOrcamento);
 
-      // Gera os bytes do PDF (Não tem mais .path)
-      final pdfBytes = await _pdfService.gerarOrcamentoPdf(nomeCliente, totalGeral, _itens);
+      // 2. BUSCA AS CONFIGURAÇÕES ATUAIS (Correção do erro)
+      final config = await DatabaseHelper.instance.getConfiguracao();
+
+      // 3. Gera os bytes do PDF passando a configuração
+      final pdfBytes = await _pdfService.gerarOrcamentoPdf(nomeCliente, totalGeral, _itens, config);
 
       // Limpa a tela principal antes de navegar
       setState(() {
@@ -114,7 +113,7 @@ class _HomePageState extends State<HomePage> {
         _itens.clear();
       });
 
-      // Abre a tela de visualização enviando os bytes do PDF
+      // Abre a tela de visualização
       if (mounted) {
         Navigator.push(
           context,
@@ -128,9 +127,7 @@ class _HomePageState extends State<HomePage> {
       }
 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao processar: $e'), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao processar: $e'), backgroundColor: Colors.red));
     } finally {
       setState(() { _isProcessing = false; });
     }
